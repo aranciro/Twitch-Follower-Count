@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Twitch Follower Count
 // @namespace       https://github.com/aranciro/
-// @version         0.1.5
+// @version         0.1.6
 // @license         GNU GPL v3
 // @description     Browser userscript that shows follower count next to channel name in a twitch channel page.
 // @author          aranciro
@@ -9,6 +9,8 @@
 // @supportURL      https://github.com/aranciro/Twitch-Follower-Count/issues
 // @updateURL       https://raw.githubusercontent.com/aranciro/Twitch-Follower-Count/master/twitch-follower-count.user.js
 // @downloadURL     https://raw.githubusercontent.com/aranciro/Twitch-Follower-Count/master/twitch-follower-count.user.js
+// @icon            https://github.com/aranciro/Twitch-Follower-Count/raw/master/res/twitch-follower-count-icon32.svg
+// @icon64          https://github.com/aranciro/Twitch-Follower-Count/raw/master/res/twitch-follower-count-icon64.svg
 // @include         *://*.twitch.tv/*
 // @run-at          document-idle
 // ==/UserScript==
