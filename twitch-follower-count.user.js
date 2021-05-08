@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Twitch Follower Count
 // @namespace       https://github.com/aranciro/
-// @version         0.1.10
+// @version         0.1.11
 // @license         GNU GPL v3
 // @description     Browser userscript that shows follower count next to channel name in a twitch channel page.
 // @author          aranciro
@@ -20,9 +20,9 @@
 // ==/UserScript==
 
 var configLiterals = {
-  standardFontSize: "Standard",
+  smallFontSize: "Small",
+  mediumFontSize: "Medium",
   bigFontSize: "Big",
-  biggerFontSize: "Bigger",
   positionChannelName: "Next to channel name",
   positionFollowButton: "Left of the follow button",
 };
@@ -35,11 +35,11 @@ GM_config.init({
       label: "Font size",
       type: "select",
       options: [
-        configLiterals.standardFontSize,
+        configLiterals.smallFontSize,
+        configLiterals.mediumFontSize,
         configLiterals.bigFontSize,
-        configLiterals.biggerFontSize,
       ],
-      default: configLiterals.standardFontSize,
+      default: configLiterals.mediumFontSize,
       title: "Select the follower count font size",
     },
     position: {
@@ -61,7 +61,7 @@ GM_config.init({
     },
     enclosed: {
       type: "checkbox",
-      default: true,
+      default: false,
       label: "Parenthesize the follower count",
       title: "Parenthesize the follower count",
     },
@@ -73,9 +73,9 @@ GM_registerMenuCommand("Configure Twitch Follower Count", () => {
 });
 
 var fontSizeMap = {
-  [configLiterals.standardFontSize]: "5",
-  [configLiterals.bigFontSize]: "4",
-  [configLiterals.biggerFontSize]: "3",
+  [configLiterals.smallFontSize]: "5",
+  [configLiterals.mediumFontSize]: "4",
+  [configLiterals.bigFontSize]: "3",
 };
 
 var config = {
