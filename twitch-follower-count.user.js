@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Twitch Follower Count
 // @namespace       https://github.com/aranciro/
-// @version         0.1.11
+// @version         0.1.12
 // @license         GNU GPL v3
 // @description     Browser userscript that shows follower count next to channel name in a twitch channel page.
 // @author          aranciro
@@ -206,17 +206,15 @@ function insertFollowerCountNode(followers) {
       followerCountContainerNode,
       divWithButtons.firstChild
     );
+  } else if (channelPartnerBadgeNode) {
+    channelPartnerBadgeNode.parentNode.insertBefore(
+      followerCountNode,
+      channelPartnerBadgeNode.nextSibling
+    );
   } else {
-    if (channelPartnerBadgeNode) {
-      channelPartnerBadgeNode.parentNode.insertBefore(
-        followerCountNode,
-        channelPartnerBadgeNode.nextSibling
-      );
-    } else {
-      channelNameNode.parentNode.insertBefore(
-        followerCountNode,
-        channelNameNode.nextSibling
-      );
-    }
+    channelNameNode.parentNode.insertBefore(
+      followerCountNode,
+      channelNameNode.nextSibling
+    );
   }
 }
