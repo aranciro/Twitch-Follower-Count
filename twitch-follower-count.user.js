@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Twitch Follower Count
 // @namespace       https://github.com/aranciro/
-// @version         0.1.8
+// @version         0.1.9
 // @license         GNU GPL v3
 // @description     Browser userscript that shows follower count next to channel name in a twitch channel page.
 // @author          aranciro
@@ -40,14 +40,14 @@ GM_config.init({
     localeString: {
       type: "checkbox",
       default: true,
-      label: "Format the follower count",
+      label: "Format the follower count (puts thousands separator etc.)",
       title:
         "Uncheck if you don't want the follower count to have separator for thousands",
     },
     enclosed: {
       type: "checkbox",
       default: true,
-      label: "Enclose the follower count",
+      label: "Parenthesize the follower count",
       title: "Parenthesize the follower count",
     },
   },
@@ -56,6 +56,13 @@ GM_config.init({
 GM_registerMenuCommand("Configure Twitch Follower Count", () => {
   GM_config.open();
 });
+
+console.log("Twitch Follower Count - CONFIG START");
+console.log(GM_config.get("fontSize"));
+console.log(GM_config.get("position"));
+console.log(GM_config.get("localeString"));
+console.log(GM_config.get("enclosed"));
+console.log("Twitch Follower Count - CONFIG END");
 
 var config = {
   fontSize: "Standard",
