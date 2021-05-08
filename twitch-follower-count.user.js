@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name            Twitch Follower Count
 // @namespace       https://github.com/aranciro/
-// @version         0.1.12
-// @license         GNU GPL v3
+// @version         0.1.13
+// @license         GPL-3.0-or-later; https://www.gnu.org/licenses/gpl-3.0.txt
 // @description     Browser userscript that shows follower count next to channel name in a twitch channel page.
 // @author          aranciro
 // @homepage        https://github.com/aranciro/Twitch-Follower-Count
@@ -92,6 +92,8 @@ var channelPartnerBadgeNodeSelector =
   "div.tw-align-items-center.tw-flex > div.tw-align-items-center.tw-c-text-link.tw-flex.tw-full-height.tw-mg-l-05 > figure > svg";
 var divWithButtonsSelector =
   "div.metadata-layout__support.tw-align-items-baseline.tw-flex.tw-flex-wrap-reverse.tw-justify-content-between > div.tw-flex.tw-flex-grow-1.tw-justify-content-end";
+var updatingCounterAnimationCSS =
+  ".updating-counter {\r\n  animation: blinker 1s linear infinite;\r\n}\r\n\r\n@keyframes blinker {  \r\n  50% { opacity: 0; }\r\n}";
 
 (function () {
   console.log("Twitch Follower Count userscript - START");
@@ -107,6 +109,9 @@ var divWithButtonsSelector =
 })();
 
 function run() {
+  var updatingCounterStyleNode = document.createElement("STYLE");
+  updatingCounterStyleNode.innerHTML = updatingCounterAnimationCSS;
+  document.head.appendChild(updatingCounterStyleNode);
   var channelNameNode = document.querySelector(channelNameNodeSelector);
   if (channelNameNode) {
     var channelName = channelNameNode.innerText;
@@ -116,6 +121,9 @@ function run() {
       followerCountNodes !== undefined &&
       followerCountNodes.length > 0;
     if (currentChannel !== channelName || !followerCountNodesExist) {
+      if (followerCountNodesExist) {
+        followerCountNodes[0].classList.add("updating-counter");
+      }
       currentChannel = channelName;
       getFollowerCount(channelNameNode, channelName);
     }
