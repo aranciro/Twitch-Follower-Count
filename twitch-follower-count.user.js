@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Twitch Follower Count
 // @namespace       https://github.com/aranciro/
-// @version         0.1.9
+// @version         0.1.10
 // @license         GNU GPL v3
 // @description     Browser userscript that shows follower count next to channel name in a twitch channel page.
 // @author          aranciro
@@ -19,6 +19,14 @@
 // @run-at          document-idle
 // ==/UserScript==
 
+var configLiterals = {
+  standardFontSize: "Standard",
+  bigFontSize: "Big",
+  biggerFontSize: "Bigger",
+  positionChannelName: "Next to channel name",
+  positionFollowButton: "Left of the follow button",
+};
+
 GM_config.init({
   id: "Twitch_Follower_Count_config",
   title: "Twitch Follower Count - Configuration",
@@ -26,15 +34,22 @@ GM_config.init({
     fontSize: {
       label: "Font size",
       type: "select",
-      options: ["Standard", "Big", "Bigger"],
-      default: "Standard",
+      options: [
+        configLiterals.standardFontSize,
+        configLiterals.bigFontSize,
+        configLiterals.biggerFontSize,
+      ],
+      default: configLiterals.standardFontSize,
       title: "Select the follower count font size",
     },
     position: {
       label: "Position",
       type: "select",
-      options: ["Next to channel name", "Left of the follow button"],
-      default: "Next to channel name",
+      options: [
+        configLiterals.positionChannelName,
+        configLiterals.positionFollowButton,
+      ],
+      default: configLiterals.positionChannelName,
       title: "Select where the follower count should appear",
     },
     localeString: {
@@ -57,24 +72,26 @@ GM_registerMenuCommand("Configure Twitch Follower Count", () => {
   GM_config.open();
 });
 
-console.log("Twitch Follower Count - CONFIG START");
-console.log(GM_config.get("fontSize"));
-console.log(GM_config.get("position"));
-console.log(GM_config.get("localeString"));
-console.log(GM_config.get("enclosed"));
-console.log("Twitch Follower Count - CONFIG END");
+var fontSizeMap = {
+  [configLiterals.standardFontSize]: "5",
+  [configLiterals.bigFontSize]: "4",
+  [configLiterals.biggerFontSize]: "3",
+};
 
 var config = {
-  fontSize: "Standard",
-  position: "Next to channel name",
-  localeString: true,
-  enclosed: true,
+  fontSize: fontSizeMap[GM_config.get("fontSize")],
+  insertNextToFollowButton:
+    configLiterals.positionFollowButton === GM_config.get("position"),
+  localeString: GM_config.get("localeString"),
+  enclosed: GM_config.get("enclosed"),
 };
 
 var currentChannel = "";
 var channelNameNodeSelector = "div.tw-align-items-center.tw-flex > a > h1";
 var channelPartnerBadgeNodeSelector =
   "div.tw-align-items-center.tw-flex > div.tw-align-items-center.tw-c-text-link.tw-flex.tw-full-height.tw-mg-l-05 > figure > svg";
+var divWithButtonsSelector =
+  "div.metadata-layout__support.tw-align-items-baseline.tw-flex.tw-flex-wrap-reverse.tw-justify-content-between > div.tw-flex.tw-flex-grow-1.tw-justify-content-end";
 
 (function () {
   console.log("Twitch Follower Count userscript - START");
@@ -157,14 +174,19 @@ function insertFollowerCountNode(followers) {
   var channelPartnerBadgeNode = document.querySelector(
     channelPartnerBadgeNodeSelector
   );
-  var followerCountTextNode = document.createTextNode(
-    "(" + Number(followers).toLocaleString() + ")"
-  );
+  var followersText = followers;
+  if (config.localeString) {
+    followersText = Number(followersText).toLocaleString();
+  }
+  if (config.enclosed) {
+    followersText = "(" + followersText + ")";
+  }
+  var followerCountTextNode = document.createTextNode(followersText);
   var followerCountNode = document.createElement("H2");
   followerCountNode.setAttribute("name", "ChannelFollowerCount");
   followerCountNode.setAttribute(
     "class",
-    "tw-c-text-alt-2 tw-font-size-5 tw-semibold"
+    "tw-c-text-alt-2 tw-font-size-" + config.fontSize + " tw-semibold"
   );
   followerCountNode.setAttribute(
     "style",
@@ -172,11 +194,8 @@ function insertFollowerCountNode(followers) {
   );
   followerCountNode.appendChild(followerCountTextNode);
   channelNameNode.style.display = "inline-block";
-  var insertNextToFollowButton = false; // TEMP
-  if (insertNextToFollowButton) {
-    var divWithButtons = document.querySelector(
-      "div.metadata-layout__support.tw-align-items-baseline.tw-flex.tw-flex-wrap-reverse.tw-justify-content-between > div.tw-flex.tw-flex-grow-1.tw-justify-content-end"
-    );
+  if (config.insertNextToFollowButton) {
+    var divWithButtons = document.querySelector(divWithButtonsSelector);
     var followerCountContainerNode = document.createElement("DIV");
     followerCountContainerNode.setAttribute(
       "style",
