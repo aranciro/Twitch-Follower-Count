@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Twitch Follower Count
 // @namespace       https://github.com/aranciro/
-// @version         0.1.7
+// @version         0.1.8
 // @license         GNU GPL v3
 // @description     Browser userscript that shows follower count next to channel name in a twitch channel page.
 // @author          aranciro
@@ -11,9 +11,58 @@
 // @downloadURL     https://raw.githubusercontent.com/aranciro/Twitch-Follower-Count/master/twitch-follower-count.user.js
 // @icon            https://github.com/aranciro/Twitch-Follower-Count/raw/master/res/twitch-follower-count-icon32.png
 // @icon64          https://github.com/aranciro/Twitch-Follower-Count/raw/master/res/twitch-follower-count-icon64.png
+// @require         https://openuserjs.org/src/libs/sizzle/GM_config.min.js
+// @grant           GM_getValue
+// @grant           GM_setValue
+// @grant           GM_registerMenuCommand
 // @include         *://*.twitch.tv/*
 // @run-at          document-idle
 // ==/UserScript==
+
+GM_config.init({
+  id: "Twitch_Follower_Count_config",
+  title: "Twitch Follower Count - Configuration",
+  fields: {
+    fontSize: {
+      label: "Font size",
+      type: "select",
+      options: ["Standard", "Big", "Bigger"],
+      default: "Standard",
+      title: "Select the follower count font size",
+    },
+    position: {
+      label: "Position",
+      type: "select",
+      options: ["Next to channel name", "Left of the follow button"],
+      default: "Next to channel name",
+      title: "Select where the follower count should appear",
+    },
+    localeString: {
+      type: "checkbox",
+      default: true,
+      label: "Format the follower count",
+      title:
+        "Uncheck if you don't want the follower count to have separator for thousands",
+    },
+    enclosed: {
+      type: "checkbox",
+      default: true,
+      label: "Enclose the follower count",
+      title: "Parenthesize the follower count",
+    },
+  },
+});
+
+GM_registerMenuCommand("Configure Twitch Follower Count", () => {
+  GM_config.open();
+});
+
+var config = {
+  fontSize: "Standard",
+  position: "Next to channel name",
+  localeString: true,
+  enclosed: true,
+};
 
 var currentChannel = "";
 var channelNameNodeSelector = "div.tw-align-items-center.tw-flex > a > h1";
@@ -116,15 +165,32 @@ function insertFollowerCountNode(followers) {
   );
   followerCountNode.appendChild(followerCountTextNode);
   channelNameNode.style.display = "inline-block";
-  if (channelPartnerBadgeNode) {
-    channelPartnerBadgeNode.parentNode.insertBefore(
-      followerCountNode,
-      channelPartnerBadgeNode.nextSibling
+  var insertNextToFollowButton = false; // TEMP
+  if (insertNextToFollowButton) {
+    var divWithButtons = document.querySelector(
+      "div.metadata-layout__support.tw-align-items-baseline.tw-flex.tw-flex-wrap-reverse.tw-justify-content-between > div.tw-flex.tw-flex-grow-1.tw-justify-content-end"
+    );
+    var followerCountContainerNode = document.createElement("DIV");
+    followerCountContainerNode.setAttribute(
+      "style",
+      "display:flex;align-items:center;"
+    );
+    followerCountContainerNode.appendChild(followerCountNode);
+    divWithButtons.insertBefore(
+      followerCountContainerNode,
+      divWithButtons.firstChild
     );
   } else {
-    channelNameNode.parentNode.insertBefore(
-      followerCountNode,
-      channelNameNode.nextSibling
-    );
+    if (channelPartnerBadgeNode) {
+      channelPartnerBadgeNode.parentNode.insertBefore(
+        followerCountNode,
+        channelPartnerBadgeNode.nextSibling
+      );
+    } else {
+      channelNameNode.parentNode.insertBefore(
+        followerCountNode,
+        channelNameNode.nextSibling
+      );
+    }
   }
 }
