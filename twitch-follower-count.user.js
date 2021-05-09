@@ -94,21 +94,9 @@ const divWithButtonsSelector =
   "div.metadata-layout__support.tw-align-items-baseline.tw-flex.tw-flex-wrap-reverse.tw-justify-content-between > div.tw-flex.tw-flex-grow-1.tw-justify-content-end";
 const updatingCounterAnimationCSS =
   ".updating-counter {\r\n  animation: blinker 1s linear infinite;\r\n}\r\n\r\n@keyframes blinker {  \r\n  50% { opacity: 0; }\r\n}";
+const followerCountNodeName = "ChannelFollowerCount";
 
-(function () {
-  console.log("Twitch Follower Count userscript - START");
-  try {
-    run();
-    setInterval(function () {
-      run();
-    }, 5000);
-  } catch (e) {
-    console.log("Twitch Follower Count userscript - STOP (EXCEPTION) ");
-    console.log(e);
-  }
-})();
-
-function run() {
+const run = () => {
   const updatingCounterStyleNode = document.createElement("style");
   updatingCounterStyleNode.innerHTML = updatingCounterAnimationCSS;
   document.head.appendChild(updatingCounterStyleNode);
@@ -116,7 +104,7 @@ function run() {
   if (channelNameNode) {
     const channelName = channelNameNode.innerText;
     const followerCountNodes = document.getElementsByName(
-      "ChannelFollowerCount"
+      followerCountNodeName
     );
     const followerCountNodesExist =
       followerCountNodes !== null &&
@@ -130,28 +118,38 @@ function run() {
       getFollowerCount(channelNameNode, channelName);
     }
   }
-}
+};
 
-function handleFollowerCountAPIResponse(http) {
+(() => {
+  console.log("Twitch Follower Count userscript - START");
+  try {
+    run();
+    setInterval(function () {
+      run();
+    }, 5000);
+  } catch (e) {
+    console.log("Twitch Follower Count userscript - STOP (EXCEPTION) ");
+    console.log(e);
+  }
+})();
+
+const handleFollowerCountAPIResponse = (http) => {
   if (http.readyState == 4 && http.status == 200) {
     const obj = http.responseText;
     const jsonObj = JSON.parse(obj);
     const followers = jsonObj[0].data.user.followers.totalCount;
     const followerCountNodes = document.getElementsByName(
-      "ChannelFollowerCount"
+      followerCountNodeName
     );
-    const followerCountNodesExist =
-      followerCountNodes !== null &&
-      followerCountNodes !== undefined &&
-      followerCountNodes.length > 0;
+    const followerCountNodesExist = followerCountNodes.length > 0;
     if (followerCountNodesExist) {
       followerCountNodes.forEach((fcNode) => fcNode.remove());
     }
     insertFollowerCountNode(followers);
   }
-}
+};
 
-function getFollowerCount(channelNameNode, channelName) {
+const getFollowerCount = (channelNameNode, channelName) => {
   const url = "https://gql.twitch.tv/gql";
   const jsonString = JSON.stringify([
     {
@@ -176,9 +174,9 @@ function getFollowerCount(channelNameNode, channelName) {
     handleFollowerCountAPIResponse(http, channelNameNode);
   };
   http.send(jsonString);
-}
+};
 
-function insertFollowerCountNode(followers) {
+const insertFollowerCountNode = (followers) => {
   const channelNameNode = document.querySelector(channelNameNodeSelector);
   const channelPartnerBadgeNode = document.querySelector(
     channelPartnerBadgeNodeSelector
@@ -188,18 +186,18 @@ function insertFollowerCountNode(followers) {
     followersText = Number(followersText).toLocaleString();
   }
   if (config.enclosed) {
-    followersText = "(" + followersText + ")";
+    followersText = `(${followersText})`;
   }
   const followerCountTextNode = document.createTextNode(followersText);
   const followerCountNode = document.createElement("h2");
-  followerCountNode.setAttribute("name", "ChannelFollowerCount");
+  followerCountNode.setAttribute("name", followerCountNodeName);
   followerCountNode.setAttribute(
     "class",
-    "tw-c-text-alt-2 tw-font-size-" + config.fontSize + " tw-semibold"
+    `tw-c-text-alt-2 tw-font-size-${config.fontSize} tw-semibold`
   );
   followerCountNode.setAttribute(
     "style",
-    "margin-left:10px!important;display:inline-block;"
+    "margin-left:10px;margin-right:10px;display:inline-block;"
   );
   followerCountNode.appendChild(followerCountTextNode);
   channelNameNode.style.display = "inline-block";
@@ -226,4 +224,4 @@ function insertFollowerCountNode(followers) {
       channelNameNode.nextSibling
     );
   }
-}
+};
