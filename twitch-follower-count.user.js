@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Twitch Follower Count
 // @namespace       https://github.com/aranciro/
-// @version         0.1.13
+// @version         0.1.14
 // @license         GPL-3.0-or-later; https://www.gnu.org/licenses/gpl-3.0.txt
 // @description     Browser userscript that shows follower count next to channel name in a twitch channel page.
 // @author          aranciro
@@ -106,16 +106,18 @@ const run = () => {
     const followerCountNodes = document.getElementsByName(
       followerCountNodeName
     );
-    const followerCountNodesExist =
-      followerCountNodes !== null &&
-      followerCountNodes !== undefined &&
-      followerCountNodes.length > 0;
+    const followerCountNodesExist = followerCountNodes.length > 0;
     if (currentChannel !== channelName || !followerCountNodesExist) {
       if (followerCountNodesExist) {
         followerCountNodes[0].classList.add("updating-counter");
       }
       currentChannel = channelName;
-      getFollowerCount(channelNameNode, channelName);
+      getFollowerCount(channelName)
+        .then((response) => handleFollowerCountAPIResponse(response))
+        .catch((error) => {
+          console.log("Error while fetching follower count");
+          console.log(error);
+        });
     }
   }
 };
@@ -133,25 +135,30 @@ const run = () => {
   }
 })();
 
-const handleFollowerCountAPIResponse = (http) => {
-  if (http.readyState == 4 && http.status == 200) {
-    const obj = http.responseText;
-    const jsonObj = JSON.parse(obj);
-    const followers = jsonObj[0].data.user.followers.totalCount;
-    const followerCountNodes = document.getElementsByName(
-      followerCountNodeName
-    );
-    const followerCountNodesExist = followerCountNodes.length > 0;
-    if (followerCountNodesExist) {
-      followerCountNodes.forEach((fcNode) => fcNode.remove());
-    }
-    insertFollowerCountNode(followers);
-  }
+const responseIsValid = (response) => {
+  response &&
+    Array.isArray(response) &&
+    response.length > 0 &&
+    "data" in response[0] &&
+    "user" in response[0].data &&
+    "followers" in response[0].data.user &&
+    "totalCount" in response[0].data.user.followers &&
+    response[0].data.user.followers.totalCount;
 };
 
-const getFollowerCount = (channelNameNode, channelName) => {
+const handleFollowerCountAPIResponse = (response) => {
+  const followers = response[0].data.user.followers.totalCount;
+  const followerCountNodes = document.getElementsByName(followerCountNodeName);
+  const followerCountNodesExist = followerCountNodes.length > 0;
+  if (followerCountNodesExist) {
+    followerCountNodes.forEach((fcNode) => fcNode.remove());
+  }
+  insertFollowerCountNode(followers);
+};
+
+const getFollowerCount = async (channelName) => {
   const url = "https://gql.twitch.tv/gql";
-  const jsonString = JSON.stringify([
+  const requestBody = JSON.stringify([
     {
       operationName: "ChannelPage_ChannelFollowerCount",
       variables: {
@@ -166,14 +173,26 @@ const getFollowerCount = (channelNameNode, channelName) => {
       },
     },
   ]);
-  const http = new XMLHttpRequest();
-  http.open("POST", url, true);
-  http.setRequestHeader("Content-type", "application/json");
-  http.setRequestHeader("Client-Id", "kimne78kx3ncx6brgo4mv6wki5h1ko");
-  http.onreadystatechange = function () {
-    handleFollowerCountAPIResponse(http, channelNameNode);
-  };
-  http.send(jsonString);
+  const followerCountResponse = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-type": "application/json",
+      "Client-Id": "kimne78kx3ncx6brgo4mv6wki5h1ko",
+    },
+    body: requestBody,
+  });
+  if (followerCountResponse.status == 200) {
+    let followerCountResponseBody = await followerCountResponse.json();
+
+    if (responseIsValid) {
+      return followerCountResponseBody;
+    }
+  } else {
+    console.log(
+      `Endpoint responded with status: ${followerCountResponse.status}`
+    );
+  }
+  throw new Error(followerCountResponse);
 };
 
 const insertFollowerCountNode = (followers) => {
