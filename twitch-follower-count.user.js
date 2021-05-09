@@ -19,7 +19,7 @@
 // @run-at          document-idle
 // ==/UserScript==
 
-var configLiterals = {
+const configLiterals = {
   smallFontSize: "Small",
   mediumFontSize: "Medium",
   bigFontSize: "Big",
@@ -72,13 +72,13 @@ GM_registerMenuCommand("Configure Twitch Follower Count", () => {
   GM_config.open();
 });
 
-var fontSizeMap = {
+const fontSizeMap = {
   [configLiterals.smallFontSize]: "5",
   [configLiterals.mediumFontSize]: "4",
   [configLiterals.bigFontSize]: "3",
 };
 
-var config = {
+const config = {
   fontSize: fontSizeMap[GM_config.get("fontSize")],
   insertNextToFollowButton:
     configLiterals.positionFollowButton === GM_config.get("position"),
@@ -86,13 +86,13 @@ var config = {
   enclosed: GM_config.get("enclosed"),
 };
 
-var currentChannel = "";
-var channelNameNodeSelector = "div.tw-align-items-center.tw-flex > a > h1";
-var channelPartnerBadgeNodeSelector =
+let currentChannel = "";
+const channelNameNodeSelector = "div.tw-align-items-center.tw-flex > a > h1";
+const channelPartnerBadgeNodeSelector =
   "div.tw-align-items-center.tw-flex > div.tw-align-items-center.tw-c-text-link.tw-flex.tw-full-height.tw-mg-l-05 > figure > svg";
-var divWithButtonsSelector =
+const divWithButtonsSelector =
   "div.metadata-layout__support.tw-align-items-baseline.tw-flex.tw-flex-wrap-reverse.tw-justify-content-between > div.tw-flex.tw-flex-grow-1.tw-justify-content-end";
-var updatingCounterAnimationCSS =
+const updatingCounterAnimationCSS =
   ".updating-counter {\r\n  animation: blinker 1s linear infinite;\r\n}\r\n\r\n@keyframes blinker {  \r\n  50% { opacity: 0; }\r\n}";
 
 (function () {
@@ -109,14 +109,16 @@ var updatingCounterAnimationCSS =
 })();
 
 function run() {
-  var updatingCounterStyleNode = document.createElement("STYLE");
+  const updatingCounterStyleNode = document.createElement("style");
   updatingCounterStyleNode.innerHTML = updatingCounterAnimationCSS;
   document.head.appendChild(updatingCounterStyleNode);
-  var channelNameNode = document.querySelector(channelNameNodeSelector);
+  const channelNameNode = document.querySelector(channelNameNodeSelector);
   if (channelNameNode) {
-    var channelName = channelNameNode.innerText;
-    var followerCountNodes = document.getElementsByName("ChannelFollowerCount");
-    var followerCountNodesExist =
+    const channelName = channelNameNode.innerText;
+    const followerCountNodes = document.getElementsByName(
+      "ChannelFollowerCount"
+    );
+    const followerCountNodesExist =
       followerCountNodes !== null &&
       followerCountNodes !== undefined &&
       followerCountNodes.length > 0;
@@ -132,27 +134,26 @@ function run() {
 
 function handleFollowerCountAPIResponse(http) {
   if (http.readyState == 4 && http.status == 200) {
-    var obj = http.responseText;
-    var jsonObj = JSON.parse(obj);
-    var followers = jsonObj[0].data.user.followers.totalCount;
-    var followerCountNodes = document.getElementsByName("ChannelFollowerCount");
-    var followerCountNodesExist =
+    const obj = http.responseText;
+    const jsonObj = JSON.parse(obj);
+    const followers = jsonObj[0].data.user.followers.totalCount;
+    const followerCountNodes = document.getElementsByName(
+      "ChannelFollowerCount"
+    );
+    const followerCountNodesExist =
       followerCountNodes !== null &&
       followerCountNodes !== undefined &&
       followerCountNodes.length > 0;
     if (followerCountNodesExist) {
-      var i;
-      for (i = 0; i < followerCountNodes.length; i++) {
-        followerCountNodes[i].remove();
-      }
+      followerCountNodes.forEach((fcNode) => fcNode.remove());
     }
     insertFollowerCountNode(followers);
   }
 }
 
 function getFollowerCount(channelNameNode, channelName) {
-  var url = "https://gql.twitch.tv/gql";
-  var jsonString = JSON.stringify([
+  const url = "https://gql.twitch.tv/gql";
+  const jsonString = JSON.stringify([
     {
       operationName: "ChannelPage_ChannelFollowerCount",
       variables: {
@@ -167,7 +168,7 @@ function getFollowerCount(channelNameNode, channelName) {
       },
     },
   ]);
-  var http = new XMLHttpRequest();
+  const http = new XMLHttpRequest();
   http.open("POST", url, true);
   http.setRequestHeader("Content-type", "application/json");
   http.setRequestHeader("Client-Id", "kimne78kx3ncx6brgo4mv6wki5h1ko");
@@ -178,19 +179,19 @@ function getFollowerCount(channelNameNode, channelName) {
 }
 
 function insertFollowerCountNode(followers) {
-  var channelNameNode = document.querySelector(channelNameNodeSelector);
-  var channelPartnerBadgeNode = document.querySelector(
+  const channelNameNode = document.querySelector(channelNameNodeSelector);
+  const channelPartnerBadgeNode = document.querySelector(
     channelPartnerBadgeNodeSelector
   );
-  var followersText = followers;
+  let followersText = followers;
   if (config.localeString) {
     followersText = Number(followersText).toLocaleString();
   }
   if (config.enclosed) {
     followersText = "(" + followersText + ")";
   }
-  var followerCountTextNode = document.createTextNode(followersText);
-  var followerCountNode = document.createElement("H2");
+  const followerCountTextNode = document.createTextNode(followersText);
+  const followerCountNode = document.createElement("h2");
   followerCountNode.setAttribute("name", "ChannelFollowerCount");
   followerCountNode.setAttribute(
     "class",
@@ -203,8 +204,8 @@ function insertFollowerCountNode(followers) {
   followerCountNode.appendChild(followerCountTextNode);
   channelNameNode.style.display = "inline-block";
   if (config.insertNextToFollowButton) {
-    var divWithButtons = document.querySelector(divWithButtonsSelector);
-    var followerCountContainerNode = document.createElement("DIV");
+    const divWithButtons = document.querySelector(divWithButtonsSelector);
+    const followerCountContainerNode = document.createElement("div");
     followerCountContainerNode.setAttribute(
       "style",
       "display:flex;align-items:center;"
