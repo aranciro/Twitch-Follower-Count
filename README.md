@@ -7,4 +7,5 @@ Browser userscript that shows follower count next to channel name in a twitch ch
 ## How to install
 
 - Download a userscript manager browser extension such as Violentmonkey, Greasemonkey or Tampermonkey for Chrome or Firefox.
-- Go [here](https://greasyfork.org/it/scripts/426005-twitch-follower-count) and click install. Done.
+- Install through [OpenUserJS](https://openuserjs.org/scripts/aranciro/Twitch_Follower_Count) or [GreasyFork](https://greasyfork.org/it/scripts/426005-twitch-follower-count).
+  Done.
