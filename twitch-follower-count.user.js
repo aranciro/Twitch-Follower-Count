@@ -19,6 +19,7 @@
 // @run-at          document-idle
 // ==/UserScript==
 
+const pollingInterval = 5000;
 let currentChannel = "";
 const followerCountNodeName = "ChannelFollowerCount";
 const selectors = {
@@ -123,7 +124,7 @@ const run = () => {
   }
   setInterval(function () {
     run();
-  }, 5000);
+  }, pollingInterval);
 };
 
 const getFollowerCount = async (channelName) => {
