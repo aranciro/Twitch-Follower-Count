@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Twitch Follower Count
 // @namespace       https://github.com/aranciro/
-// @version         0.1.16
+// @version         0.1.17
 // @license         GPL-3.0-or-later; https://www.gnu.org/licenses/gpl-3.0.txt
 // @description     Browser userscript that shows follower count next to channel name in a twitch channel page.
 // @author          aranciro
@@ -19,12 +19,31 @@
 // @run-at          document-idle
 // ==/UserScript==
 
+const pollingInterval = 5000;
+let currentChannel = "";
+const followerCountNodeName = "ChannelFollowerCount";
+const selectors = {
+  channelNameNode: "div.tw-align-items-center.tw-flex > a > h1",
+  channelPartnerBadgeNode:
+    "div.tw-align-items-center.tw-flex > div.tw-align-items-center.tw-c-text-link.tw-flex.tw-full-height.tw-mg-l-05 > figure > svg",
+  divWithButtons:
+    "div.metadata-layout__support.tw-align-items-baseline.tw-flex.tw-flex-wrap-reverse.tw-justify-content-between > div.tw-flex.tw-flex-grow-1.tw-justify-content-end",
+};
+const updatingCounterAnimationCSS =
+  ".updating-counter { animation: blinker 1s linear infinite; } @keyframes blinker { 50% { opacity: 0; } }";
+
 const configLiterals = {
   smallFontSize: "Small",
   mediumFontSize: "Medium",
   bigFontSize: "Big",
   positionChannelName: "Next to channel name",
   positionFollowButton: "Left of the follow button",
+};
+
+const fontSizeMap = {
+  [configLiterals.smallFontSize]: "5",
+  [configLiterals.mediumFontSize]: "4",
+  [configLiterals.bigFontSize]: "3",
 };
 
 GM_config.init({
@@ -72,12 +91,6 @@ GM_registerMenuCommand("Configure Twitch Follower Count", () => {
   GM_config.open();
 });
 
-const fontSizeMap = {
-  [configLiterals.smallFontSize]: "5",
-  [configLiterals.mediumFontSize]: "4",
-  [configLiterals.bigFontSize]: "3",
-};
-
 const config = {
   fontSize: fontSizeMap[GM_config.get("fontSize")],
   insertNextToFollowButton:
@@ -86,21 +99,11 @@ const config = {
   enclosed: GM_config.get("enclosed"),
 };
 
-let currentChannel = "";
-const channelNameNodeSelector = "div.tw-align-items-center.tw-flex > a > h1";
-const channelPartnerBadgeNodeSelector =
-  "div.tw-align-items-center.tw-flex > div.tw-align-items-center.tw-c-text-link.tw-flex.tw-full-height.tw-mg-l-05 > figure > svg";
-const divWithButtonsSelector =
-  "div.metadata-layout__support.tw-align-items-baseline.tw-flex.tw-flex-wrap-reverse.tw-justify-content-between > div.tw-flex.tw-flex-grow-1.tw-justify-content-end";
-const updatingCounterAnimationCSS =
-  ".updating-counter {\r\n  animation: blinker 1s linear infinite;\r\n}\r\n\r\n@keyframes blinker {  \r\n  50% { opacity: 0; }\r\n}";
-const followerCountNodeName = "ChannelFollowerCount";
-
 const run = () => {
   const updatingCounterStyleNode = document.createElement("style");
   updatingCounterStyleNode.innerHTML = updatingCounterAnimationCSS;
   document.head.appendChild(updatingCounterStyleNode);
-  const channelNameNode = document.querySelector(channelNameNodeSelector);
+  const channelNameNode = document.querySelector(selectors.channelNameNode);
   if (channelNameNode) {
     const channelName = channelNameNode.innerText;
     const followerCountNodes = document.getElementsByName(
@@ -108,9 +111,9 @@ const run = () => {
     );
     const followerCountNodesExist = followerCountNodes.length > 0;
     if (currentChannel !== channelName || !followerCountNodesExist) {
-      if (followerCountNodesExist) {
-        followerCountNodes[0].classList.add("updating-counter");
-      }
+      followerCountNodes.forEach((fcNode) =>
+        fcNode.classList.add("updating-counter")
+      );
       currentChannel = channelName;
       getFollowerCount(channelName)
         .then((response) => handleFollowerCountAPIResponse(response))
@@ -119,47 +122,9 @@ const run = () => {
         });
     }
   }
-};
-
-(() => {
-  console.log("Twitch Follower Count userscript - START");
-  try {
+  setInterval(function () {
     run();
-    setInterval(function () {
-      run();
-    }, 5000);
-  } catch (e) {
-    console.log("Twitch Follower Count userscript - STOP (EXCEPTION) ");
-    console.log(e);
-  }
-})();
-
-const responseIsValid = (response) => {
-  return (
-    response &&
-    Array.isArray(response) &&
-    response.length > 0 &&
-    "data" in response[0] &&
-    "user" in response[0].data &&
-    "followers" in response[0].data.user &&
-    "totalCount" in response[0].data.user.followers &&
-    response[0].data.user.followers.totalCount
-  );
-};
-
-const handleFollowerCountAPIResponse = (response) => {
-  if (!responseIsValid(response)) {
-    console.error(response);
-    const errorMessage = "Invalid response body";
-    throw new Error(errorMessage);
-  }
-  const followers = response[0].data.user.followers.totalCount;
-  const followerCountNodes = document.getElementsByName(followerCountNodeName);
-  const followerCountNodesExist = followerCountNodes.length > 0;
-  if (followerCountNodesExist) {
-    followerCountNodes.forEach((fcNode) => fcNode.remove());
-  }
-  insertFollowerCountNode(followers);
+  }, pollingInterval);
 };
 
 const getFollowerCount = async (channelName) => {
@@ -197,50 +162,40 @@ const getFollowerCount = async (channelName) => {
   }
 };
 
-const createFollowerCountTextNode = (followers) => {
-  let followersText = followers;
-  if (config.localeString) {
-    followersText = Number(followersText).toLocaleString();
-  }
-  if (config.enclosed) {
-    followersText = `(${followersText})`;
-  }
-  return document.createTextNode(followersText);
-};
-
-const createFollowerCountNode = (followers, fontSize) => {
-  const followerCountTextNode = createFollowerCountTextNode(followers);
-  const followerCountNode = document.createElement("h2");
-  followerCountNode.setAttribute("name", followerCountNodeName);
-  followerCountNode.classList.add(
-    "tw-c-text-alt-2",
-    `tw-font-size-${fontSize}`,
-    "tw-semibold"
+const responseIsValid = (response) => {
+  return (
+    response &&
+    Array.isArray(response) &&
+    response.length > 0 &&
+    "data" in response[0] &&
+    "user" in response[0].data &&
+    "followers" in response[0].data.user &&
+    "totalCount" in response[0].data.user.followers &&
+    response[0].data.user.followers.totalCount
   );
-  followerCountNode.style.marginLeft = "1rem";
-  followerCountNode.style.marginRight = "1rem";
-  followerCountNode.style.display = "inline-block";
-  followerCountNode.appendChild(followerCountTextNode);
-  return followerCountNode;
 };
 
-const createFollowerCountContainerNode = (followerCountNode) => {
-  const followerCountContainerNode = document.createElement("div");
-  followerCountContainerNode.style.display = "flex";
-  followerCountContainerNode.style.alignItems = "center";
-  followerCountContainerNode.appendChild(followerCountNode);
-  return followerCountContainerNode;
+const handleFollowerCountAPIResponse = (response) => {
+  if (!responseIsValid(response)) {
+    console.error(response);
+    const errorMessage = "Invalid response body";
+    throw new Error(errorMessage);
+  }
+  const followers = response[0].data.user.followers.totalCount;
+  const followerCountNodes = document.getElementsByName(followerCountNodeName);
+  followerCountNodes.forEach((fcNode) => fcNode.remove());
+  insertFollowerCountNode(followers);
 };
 
 const insertFollowerCountNode = (followers) => {
-  const channelNameNode = document.querySelector(channelNameNodeSelector);
+  const channelNameNode = document.querySelector(selectors.channelNameNode);
   channelNameNode.style.display = "inline-block";
   const channelPartnerBadgeNode = document.querySelector(
-    channelPartnerBadgeNodeSelector
+    selectors.channelPartnerBadgeNode
   );
   const followerCountNode = createFollowerCountNode(followers, config.fontSize);
   if (config.insertNextToFollowButton) {
-    const divWithButtons = document.querySelector(divWithButtonsSelector);
+    const divWithButtons = document.querySelector(selectors.divWithButtons);
     const followerCountContainerNode =
       createFollowerCountContainerNode(followerCountNode);
     divWithButtons.insertBefore(
@@ -259,3 +214,47 @@ const insertFollowerCountNode = (followers) => {
     );
   }
 };
+
+const createFollowerCountNode = (followers, fontSize) => {
+  const followerCountTextNode = createFollowerCountTextNode(followers);
+  const followerCountNode = document.createElement("h2");
+  followerCountNode.setAttribute("name", followerCountNodeName);
+  followerCountNode.classList.add(
+    "tw-c-text-alt-2",
+    `tw-font-size-${fontSize}`,
+    "tw-semibold"
+  );
+  followerCountNode.style.marginLeft = "1rem";
+  followerCountNode.style.marginRight = "1rem";
+  followerCountNode.style.display = "inline-block";
+  followerCountNode.appendChild(followerCountTextNode);
+  return followerCountNode;
+};
+
+const createFollowerCountTextNode = (followers) => {
+  let followersText = followers;
+  if (config.localeString) {
+    followersText = Number(followersText).toLocaleString();
+  }
+  if (config.enclosed) {
+    followersText = `(${followersText})`;
+  }
+  return document.createTextNode(followersText);
+};
+
+const createFollowerCountContainerNode = (followerCountNode) => {
+  const followerCountContainerNode = document.createElement("div");
+  followerCountContainerNode.style.display = "flex";
+  followerCountContainerNode.style.alignItems = "center";
+  followerCountContainerNode.appendChild(followerCountNode);
+  return followerCountContainerNode;
+};
+
+(() => {
+  console.log("Twitch Follower Count userscript - START");
+  try {
+    run();
+  } catch (e) {
+    console.log("Twitch Follower Count userscript - STOP (ERROR) \n", e);
+  }
+})();
