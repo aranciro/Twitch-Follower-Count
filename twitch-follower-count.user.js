@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Twitch Follower Count
 // @namespace       https://github.com/aranciro/
-// @version         0.1.15
+// @version         0.1.16
 // @license         GPL-3.0-or-later; https://www.gnu.org/licenses/gpl-3.0.txt
 // @description     Browser userscript that shows follower count next to channel name in a twitch channel page.
 // @author          aranciro
@@ -115,8 +115,7 @@ const run = () => {
       getFollowerCount(channelName)
         .then((response) => handleFollowerCountAPIResponse(response))
         .catch((error) => {
-          console.log("Error while fetching follower count");
-          console.log(error);
+          console.error(error);
         });
     }
   }
@@ -136,17 +135,24 @@ const run = () => {
 })();
 
 const responseIsValid = (response) => {
-  response &&
+  return (
+    response &&
     Array.isArray(response) &&
     response.length > 0 &&
     "data" in response[0] &&
     "user" in response[0].data &&
     "followers" in response[0].data.user &&
     "totalCount" in response[0].data.user.followers &&
-    response[0].data.user.followers.totalCount;
+    response[0].data.user.followers.totalCount
+  );
 };
 
 const handleFollowerCountAPIResponse = (response) => {
+  if (!responseIsValid(response)) {
+    console.error(response);
+    const errorMessage = "Invalid response body";
+    throw new Error(errorMessage);
+  }
   const followers = response[0].data.user.followers.totalCount;
   const followerCountNodes = document.getElementsByName(followerCountNodeName);
   const followerCountNodesExist = followerCountNodes.length > 0;
@@ -181,18 +187,14 @@ const getFollowerCount = async (channelName) => {
     },
     body: requestBody,
   });
-  if (followerCountResponse.status == 200) {
+  if (followerCountResponse.ok) {
     let followerCountResponseBody = await followerCountResponse.json();
-
-    if (responseIsValid) {
-      return followerCountResponseBody;
-    }
+    return followerCountResponseBody;
   } else {
-    console.log(
-      `Endpoint responded with status: ${followerCountResponse.status}`
-    );
+    console.error(followerCountResponse);
+    const errorMessage = `Endpoint responded with status: ${followerCountResponse.status}`;
+    throw new Error(errorMessage);
   }
-  throw new Error(followerCountResponse);
 };
 
 const createFollowerCountTextNode = (followers) => {
