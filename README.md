@@ -1,6 +1,6 @@
 # Twitch Follower Count
 
-Browser userscript that shows follower count next to channel name in a twitch channel page.
+Configurable browser userscript that shows follower count when in a twitch channel page.
 
 ![preview](/res/twitch-follower-count-preview.png)
 
