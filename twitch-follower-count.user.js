@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Twitch Follower Count
 // @namespace       https://github.com/aranciro/
-// @version         0.1.18
+// @version         1.0.0
 // @license         GPL-3.0-or-later; https://www.gnu.org/licenses/gpl-3.0.txt
 // @description     Browser userscript that shows follower count next to channel name in a twitch channel page.
 // @author          aranciro
@@ -20,8 +20,9 @@
 // ==/UserScript==
 
 const pollingInterval = 5000;
-let currentChannel = "";
 const followerCountNodeName = "ChannelFollowerCount";
+const updatingCounterAnimationCSS =
+  ".updating-counter { animation: blinker 1s linear infinite; } @keyframes blinker { 50% { opacity: 0; } }";
 const selectors = {
   channelNameNode: "div.tw-align-items-center.tw-flex > a > h1",
   channelPartnerBadgeNode:
@@ -29,8 +30,6 @@ const selectors = {
   divWithButtons:
     "div.metadata-layout__support.tw-align-items-baseline.tw-flex.tw-flex-wrap-reverse.tw-justify-content-between > div.tw-flex.tw-flex-grow-1.tw-justify-content-end",
 };
-const updatingCounterAnimationCSS =
-  ".updating-counter { animation: blinker 1s linear infinite; } @keyframes blinker { 50% { opacity: 0; } }";
 
 const configLiterals = {
   smallFontSize: "Small",
@@ -85,11 +84,19 @@ GM_config.init({
       title: "Parenthesize the follower count",
     },
   },
+  events: {
+    save: () => {
+      updateConfig();
+    },
+  },
 });
 
 GM_registerMenuCommand("Configure Twitch Follower Count", () => {
   GM_config.open();
 });
+
+let currentChannel;
+let channelFollowers;
 
 const config = {
   fontSize: fontSizeMap[GM_config.get("fontSize")],
@@ -97,6 +104,16 @@ const config = {
     configLiterals.positionFollowButton === GM_config.get("position"),
   localeString: GM_config.get("localeString"),
   enclosed: GM_config.get("enclosed"),
+};
+
+const updateConfig = () => {
+  config.fontSize = fontSizeMap[GM_config.get("fontSize")];
+  config.insertNextToFollowButton =
+    configLiterals.positionFollowButton === GM_config.get("position");
+  config.localeString = GM_config.get("localeString");
+  config.enclosed = GM_config.get("enclosed");
+  removeExistingFollowerCountNodes();
+  insertFollowerCountNode();
 };
 
 const run = () => {
@@ -115,7 +132,7 @@ const run = () => {
         fcNode.classList.add("updating-counter")
       );
       currentChannel = channelName;
-      getFollowerCount(channelName)
+      getFollowerCount()
         .then((response) => handleFollowerCountAPIResponse(response))
         .catch((error) => {
           console.error(error);
@@ -124,13 +141,18 @@ const run = () => {
   }
 };
 
-const getFollowerCount = async (channelName) => {
+const removeExistingFollowerCountNodes = () => {
+  const followerCountNodes = document.getElementsByName(followerCountNodeName);
+  followerCountNodes.forEach((fcNode) => fcNode.remove());
+};
+
+const getFollowerCount = async () => {
   const url = "https://gql.twitch.tv/gql";
   const requestBody = JSON.stringify([
     {
       operationName: "ChannelPage_ChannelFollowerCount",
       variables: {
-        login: channelName,
+        login: currentChannel,
       },
       extensions: {
         persistedQuery: {
@@ -178,19 +200,18 @@ const handleFollowerCountAPIResponse = (response) => {
     const errorMessage = "Invalid response body";
     throw new Error(errorMessage);
   }
-  const followers = response[0].data.user.followers.totalCount;
-  const followerCountNodes = document.getElementsByName(followerCountNodeName);
-  followerCountNodes.forEach((fcNode) => fcNode.remove());
-  insertFollowerCountNode(followers);
+  channelFollowers = response[0].data.user.followers.totalCount;
+  removeExistingFollowerCountNodes();
+  insertFollowerCountNode();
 };
 
-const insertFollowerCountNode = (followers) => {
+const insertFollowerCountNode = () => {
   const channelNameNode = document.querySelector(selectors.channelNameNode);
   channelNameNode.style.display = "inline-block";
   const channelPartnerBadgeNode = document.querySelector(
     selectors.channelPartnerBadgeNode
   );
-  const followerCountNode = createFollowerCountNode(followers, config.fontSize);
+  const followerCountNode = createFollowerCountNode();
   if (config.insertNextToFollowButton) {
     const divWithButtons = document.querySelector(selectors.divWithButtons);
     const followerCountContainerNode =
@@ -212,13 +233,13 @@ const insertFollowerCountNode = (followers) => {
   }
 };
 
-const createFollowerCountNode = (followers, fontSize) => {
-  const followerCountTextNode = createFollowerCountTextNode(followers);
+const createFollowerCountNode = () => {
+  const followerCountTextNode = createFollowerCountTextNode();
   const followerCountNode = document.createElement("h2");
   followerCountNode.setAttribute("name", followerCountNodeName);
   followerCountNode.classList.add(
     "tw-c-text-alt-2",
-    `tw-font-size-${fontSize}`,
+    `tw-font-size-${config.fontSize}`,
     "tw-semibold"
   );
   followerCountNode.style.marginLeft = "1rem";
@@ -228,8 +249,8 @@ const createFollowerCountNode = (followers, fontSize) => {
   return followerCountNode;
 };
 
-const createFollowerCountTextNode = (followers) => {
-  let followersText = followers;
+const createFollowerCountTextNode = () => {
+  let followersText = channelFollowers;
   if (config.localeString) {
     followersText = Number(followersText).toLocaleString();
   }
