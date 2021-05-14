@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Twitch Follower Count
 // @namespace       https://github.com/aranciro/
-// @version         1.0.1
+// @version         1.0.2
 // @license         GPL-3.0-or-later; https://www.gnu.org/licenses/gpl-3.0.txt
 // @description     Configurable browser userscript that shows follower count when in a twitch channel page.
 // @author          aranciro
@@ -183,14 +183,14 @@ const getFollowerCount = async () => {
 
 const responseIsValid = (response) => {
   return (
-    response &&
     Array.isArray(response) &&
     response.length > 0 &&
     "data" in response[0] &&
     "user" in response[0].data &&
     "followers" in response[0].data.user &&
     "totalCount" in response[0].data.user.followers &&
-    response[0].data.user.followers.totalCount
+    response[0].data.user.followers.totalCount !== null &&
+    response[0].data.user.followers.totalCount !== undefined
   );
 };
 
