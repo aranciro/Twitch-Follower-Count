@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Twitch Follower Count
 // @namespace       https://github.com/aranciro/
-// @version         1.0.2
+// @version         1.1.0
 // @license         GPL-3.0-or-later; https://www.gnu.org/licenses/gpl-3.0.txt
 // @description     Configurable browser userscript that shows follower count when in a twitch channel page.
 // @author          aranciro
@@ -15,14 +15,14 @@
 // @grant           GM_getValue
 // @grant           GM_setValue
 // @grant           GM_registerMenuCommand
+// @grant           GM_addStyle
 // @include         *://*.twitch.tv/*
 // @run-at          document-idle
 // ==/UserScript==
 
 const pollingInterval = 5000;
 const followerCountNodeName = "ChannelFollowerCount";
-const updatingCounterAnimationCSS =
-  ".updating-counter { animation: blinker 1s linear infinite; } @keyframes blinker { 50% { opacity: 0; } }";
+
 const selectors = {
   channelNameNode: "div.tw-align-items-center.tw-flex > a > h1",
   channelPartnerBadgeNode:
@@ -91,6 +91,11 @@ GM_config.init({
   },
 });
 
+GM_addStyle(`
+@keyframes blinker { 50% { opacity: 0; } } 
+.updating-counter { animation: blinker 1s linear infinite; } 
+`);
+
 GM_registerMenuCommand("Configure Twitch Follower Count", () => {
   GM_config.open();
 });
@@ -117,9 +122,6 @@ const updateConfig = () => {
 };
 
 const run = () => {
-  const updatingCounterStyleNode = document.createElement("style");
-  updatingCounterStyleNode.innerHTML = updatingCounterAnimationCSS;
-  document.head.appendChild(updatingCounterStyleNode);
   const channelNameNode = document.querySelector(selectors.channelNameNode);
   if (channelNameNode) {
     const channelName = channelNameNode.innerText;
