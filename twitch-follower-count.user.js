@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Twitch Follower Count
 // @namespace       https://github.com/aranciro/
-// @version         1.1.0
+// @version         1.1.1
 // @license         GPL-3.0-or-later; https://www.gnu.org/licenses/gpl-3.0.txt
 // @description     Configurable browser userscript that shows follower count when in a twitch channel page.
 // @author          aranciro
@@ -22,6 +22,8 @@
 
 const pollingInterval = 5000;
 const followerCountNodeName = "ChannelFollowerCount";
+const channelUrlRegExp =
+  /^(?:https?:\/\/)?(?:www\.|go\.)?twitch\.tv\/([a-z0-9_]+)($|\?)/;
 
 const selectors = {
   channelNameNode: "div.tw-align-items-center.tw-flex > a > h1",
@@ -100,8 +102,11 @@ GM_registerMenuCommand("Configure Twitch Follower Count", () => {
   GM_config.open();
 });
 
-let currentChannel;
-let channelFollowers;
+const currentChannel = {
+  name: undefined,
+  nameShown: undefined,
+  followers: undefined,
+};
 
 const config = {
   fontSize: fontSizeMap[GM_config.get("fontSize")],
@@ -124,16 +129,26 @@ const updateConfig = () => {
 const run = () => {
   const channelNameNode = document.querySelector(selectors.channelNameNode);
   if (channelNameNode) {
-    const channelName = channelNameNode.innerText;
+    const pageUrl = window.location.href;
+    const matches = channelUrlRegExp.exec(pageUrl);
+    let channelNameFromUrl;
+    if (matches.length > 1) {
+      const channelNameGroup = matches[1];
+      channelNameFromUrl = channelNameGroup;
+    }
     const followerCountNodes = document.getElementsByName(
       followerCountNodeName
     );
     const followerCountNodesExist = followerCountNodes.length > 0;
-    if (currentChannel !== channelName || !followerCountNodesExist) {
+    if (
+      currentChannel.name !== channelNameFromUrl ||
+      !followerCountNodesExist
+    ) {
       followerCountNodes.forEach((fcNode) =>
         fcNode.classList.add("updating-counter")
       );
-      currentChannel = channelName;
+      currentChannel.nameShown = channelNameNode.innerText;
+      currentChannel.name = channelNameFromUrl;
       getFollowerCount()
         .then((response) => handleFollowerCountAPIResponse(response))
         .catch((error) => {
@@ -154,7 +169,7 @@ const getFollowerCount = async () => {
     {
       operationName: "ChannelPage_ChannelFollowerCount",
       variables: {
-        login: currentChannel,
+        login: currentChannel.name,
       },
       extensions: {
         persistedQuery: {
@@ -202,7 +217,7 @@ const handleFollowerCountAPIResponse = (response) => {
     const errorMessage = "Invalid response body";
     throw new Error(errorMessage);
   }
-  channelFollowers = response[0].data.user.followers.totalCount;
+  currentChannel.followers = response[0].data.user.followers.totalCount;
   removeExistingFollowerCountNodes();
   insertFollowerCountNode();
 };
@@ -252,7 +267,7 @@ const createFollowerCountNode = () => {
 };
 
 const createFollowerCountTextNode = () => {
-  let followersText = channelFollowers;
+  let followersText = currentChannel.followers;
   if (config.localeString) {
     followersText = Number(followersText).toLocaleString();
   }
