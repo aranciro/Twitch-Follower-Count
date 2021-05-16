@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Twitch Follower Count
 // @namespace       https://github.com/aranciro/
-// @version         1.1.1
+// @version         1.2.0
 // @license         GPL-3.0-or-later; https://www.gnu.org/licenses/gpl-3.0.txt
 // @description     Configurable browser userscript that shows follower count when in a twitch channel page.
 // @author          aranciro
@@ -22,10 +22,12 @@
 
 const pollingInterval = 5000;
 const followerCountNodeName = "ChannelFollowerCount";
-const channelUrlRegExp =
-  /^(?:https?:\/\/)?(?:www\.|go\.)?twitch\.tv\/([a-z0-9_]+)($|\?)/;
+const channelPageTitleRegExp = /^([^\s-]+)\s-\s(?:T|t)witch$/;
+
+let titleObserver;
 
 const selectors = {
+  channelNameAnchorNode: "div.tw-align-items-center.tw-flex > a",
   channelNameNode: "div.tw-align-items-center.tw-flex > a > h1",
   channelPartnerBadgeNode:
     "div.tw-align-items-center.tw-flex > div.tw-align-items-center.tw-c-text-link.tw-flex.tw-full-height.tw-mg-l-05 > figure > svg",
@@ -129,31 +131,33 @@ const updateConfig = () => {
 const run = () => {
   const channelNameNode = document.querySelector(selectors.channelNameNode);
   if (channelNameNode) {
-    const pageUrl = window.location.href;
-    const matches = channelUrlRegExp.exec(pageUrl);
-    let channelNameFromUrl;
-    if (matches.length > 1) {
-      const channelNameGroup = matches[1];
-      channelNameFromUrl = channelNameGroup;
-    }
     const followerCountNodes = document.getElementsByName(
       followerCountNodeName
     );
     const followerCountNodesExist = followerCountNodes.length > 0;
-    if (
-      currentChannel.name !== channelNameFromUrl ||
-      !followerCountNodesExist
-    ) {
-      followerCountNodes.forEach((fcNode) =>
-        fcNode.classList.add("updating-counter")
-      );
-      currentChannel.nameShown = channelNameNode.innerText;
-      currentChannel.name = channelNameFromUrl;
-      getFollowerCount()
-        .then((response) => handleFollowerCountAPIResponse(response))
-        .catch((error) => {
-          console.error(error);
-        });
+    const channelNameAnchorNode = document.querySelector(
+      selectors.channelNameAnchorNode
+    );
+    if (channelNameAnchorNode) {
+      const anchorHref = channelNameAnchorNode.getAttribute("href");
+      if (anchorHref && anchorHref.length > 1) {
+        const channelNameFromAnchor = anchorHref.substr(1);
+        if (
+          currentChannel.name !== channelNameFromAnchor ||
+          !followerCountNodesExist
+        ) {
+          followerCountNodes.forEach((fcNode) =>
+            fcNode.classList.add("updating-counter")
+          );
+          currentChannel.nameShown = channelNameNode.innerText;
+          currentChannel.name = channelNameFromAnchor;
+          getFollowerCount()
+            .then((response) => handleFollowerCountAPIResponse(response))
+            .catch((error) => {
+              console.error(error);
+            });
+        }
+      }
     }
   }
 };
@@ -220,6 +224,36 @@ const handleFollowerCountAPIResponse = (response) => {
   currentChannel.followers = response[0].data.user.followers.totalCount;
   removeExistingFollowerCountNodes();
   insertFollowerCountNode();
+  monitorTitle();
+};
+
+const monitorTitle = () => {
+  if (titleObserver) {
+    titleObserver.disconnect();
+  }
+  titleObserver = new MutationObserver(() => handleTitleChange());
+  titleObserver.observe(document.querySelector("title"), {
+    subtree: true,
+    characterData: true,
+    childList: true,
+  });
+};
+
+const handleTitleChange = () => {
+  const isChannelPage = document.querySelector(selectors.channelNameNode);
+  if (isChannelPage) {
+    const matches = channelPageTitleRegExp.exec(document.title);
+    if (matches && matches.length > 1) {
+      const channelNameFromTitle = matches[1];
+      const channelHasChanged =
+        currentChannel.nameShown &&
+        channelNameFromTitle.toLowerCase() !==
+          currentChannel.nameShown.toLowerCase();
+      if (channelHasChanged) {
+        run();
+      }
+    }
+  }
 };
 
 const insertFollowerCountNode = () => {
@@ -289,9 +323,7 @@ const createFollowerCountContainerNode = (followerCountNode) => {
   console.log("Twitch Follower Count userscript - START");
   try {
     run();
-    setInterval(function () {
-      run();
-    }, pollingInterval);
+    setInterval(() => run(), pollingInterval);
   } catch (e) {
     console.log("Twitch Follower Count userscript - STOP (ERROR) \n", e);
   }
