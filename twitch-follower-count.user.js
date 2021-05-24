@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Twitch Follower Count
 // @namespace       https://github.com/aranciro/
-// @version         1.2.0
+// @version         1.2.1
 // @license         GPL-3.0-or-later; https://www.gnu.org/licenses/gpl-3.0.txt
 // @description     Configurable browser userscript that shows follower count when in a twitch channel page.
 // @author          aranciro
@@ -27,12 +27,13 @@ const channelPageTitleRegExp = /^([^\s-]+)\s-\s(?:T|t)witch$/;
 let titleObserver;
 
 const selectors = {
-  channelNameAnchorNode: "div.tw-align-items-center.tw-flex > a",
-  channelNameNode: "div.tw-align-items-center.tw-flex > a > h1",
+  channelNameAnchorNode: "div.channel-info-content a[href^='/']",
+  channelNameNode: "div.channel-info-content a[href^='/'] > h1.tw-title",
   channelPartnerBadgeNode:
-    "div.tw-align-items-center.tw-flex > div.tw-align-items-center.tw-c-text-link.tw-flex.tw-full-height.tw-mg-l-05 > figure > svg",
-  divWithButtons:
-    "div.metadata-layout__support.tw-align-items-baseline.tw-flex.tw-flex-wrap-reverse.tw-justify-content-between > div.tw-flex.tw-flex-grow-1.tw-justify-content-end",
+    "div.channel-info-content div.sc-AxjAm.gOCWUc > figure.tw-svg > svg",
+  divNextToButtonsNode:
+    "div.sc-AxjAm.StDqN.metadata-layout__secondary-button-spacing",
+  divWithButtonsRowNode: "div.sc-AxjAm.fAqNuL",
 };
 
 const configLiterals = {
@@ -264,12 +265,14 @@ const insertFollowerCountNode = () => {
   );
   const followerCountNode = createFollowerCountNode();
   if (config.insertNextToFollowButton) {
-    const divWithButtons = document.querySelector(selectors.divWithButtons);
+    const divWithButtonsRowNode = document.querySelector(
+      selectors.divWithButtonsRowNode
+    );
     const followerCountContainerNode =
       createFollowerCountContainerNode(followerCountNode);
-    divWithButtons.insertBefore(
+    divWithButtonsRowNode.insertBefore(
       followerCountContainerNode,
-      divWithButtons.firstChild
+      divWithButtonsRowNode.firstChild
     );
   } else if (channelPartnerBadgeNode) {
     channelPartnerBadgeNode.parentNode.insertBefore(
@@ -314,7 +317,9 @@ const createFollowerCountTextNode = () => {
 const createFollowerCountContainerNode = (followerCountNode) => {
   const followerCountContainerNode = document.createElement("div");
   followerCountContainerNode.style.display = "flex";
-  followerCountContainerNode.style.alignItems = "center";
+  followerCountContainerNode.style.justifyContent = "center";
+  followerCountContainerNode.style.alignContent = "center";
+  followerCountContainerNode.style.flexDirection = "column";
   followerCountContainerNode.appendChild(followerCountNode);
   return followerCountContainerNode;
 };
