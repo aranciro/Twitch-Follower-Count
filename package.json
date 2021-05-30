@@ -1,0 +1,23 @@
+{
+  "name": "twitch-follower-count",
+  "version": "1.2.1",
+  "description": "Configurable browser userscript that shows follower count when in a twitch channel page.",
+  "main": "twitch-follower-count.user.js",
+  "dependencies": {},
+  "devDependencies": {
+    "eslint": "^7.26.0"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aranciro/Twitch-Follower-Count.git"
+  },
+  "author": "aranciro",
+  "license": "GPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/aranciro/Twitch-Follower-Count/issues"
+  },
+  "homepage": "https://github.com/aranciro/Twitch-Follower-Count#readme"
+}
